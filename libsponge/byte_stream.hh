@@ -2,7 +2,7 @@
 #define SPONGE_LIBSPONGE_BYTE_STREAM_HH
 
 #include <string>
-
+#include <list>
 //! \brief An in-order byte stream.
 
 //! Bytes are written on the "input" side and read from the "output"
@@ -11,6 +11,19 @@
 class ByteStream {
   private:
     // Your code here -- add private members as necessary.
+    // 已经读写的比特计数
+    size_t tot_written{0ul};
+    size_t tot_read{0ul};
+
+    // 是否结束
+    bool is_input_end{false};
+
+    // buffer容量
+    size_t _capacity;
+
+    std::list<char> _buffer{};
+    
+    
 
     // Hint: This doesn't need to be a sophisticated data structure at
     // all, but if any of your tests are taking longer than a second,
