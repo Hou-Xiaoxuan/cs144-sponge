@@ -1,6 +1,30 @@
 {
   "configurations": [
     {
+        "name": "调试main",
+        "type": "cppdbg",
+        "request": "launch", 
+        "program": "${workspaceRoot}/.temp/main.out",
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/.temp/",
+        "externalConsole": false,
+        "internalConsoleOptions": "neverOpen",
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "为 gdb 启用整齐打印",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description":  "将反汇编风格设置为 Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            }
+        ],
+        "preLaunchTask": "编译测试文件",
+    },
+    {
         "name": "调试webget",
         "type": "cppdbg",
         "request": "launch", 
