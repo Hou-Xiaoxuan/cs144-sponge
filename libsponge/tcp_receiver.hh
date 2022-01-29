@@ -20,6 +20,13 @@ class TCPReceiver {
     //! The maximum number of bytes we'll store.
     size_t _capacity;
 
+    size_t _ackno; // _ackno
+    bool _sin = false; // 是否建立连接
+    bool _fin = false; // 是否已经结束
+
+    void _set_sin(const TCPSegment &seg);       // 建立连接
+    void _set_fin(const TCPSegment &seg);       // 准备结束连接
+    void _recieve_bytes(const TCPSegment &seg); // 写入比特信息
   public:
     //! \brief Construct a TCP receiver
     //!

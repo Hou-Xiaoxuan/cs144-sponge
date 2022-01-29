@@ -48,7 +48,6 @@ uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint)
     uint64_t ret = uint64_t(n.raw_value() - isn.raw_value());
     if(ret > compar and (ret - compar) > (1ul<<31ul) and checkpoint >= (1ul<<32ul)){
         ret -= (1ul<<32ul);
-
     }
     else if(ret < compar and (compar - ret) > (1ul<<31ul)){
         ret += (1ul<<32ul);
