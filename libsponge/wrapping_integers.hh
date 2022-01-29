@@ -3,7 +3,10 @@
 
 #include <cstdint>
 #include <ostream>
-
+/*
+* 一个32位sequence number(从isn开始)与64位absolutely sequence number(从0开始)之间的转换。
+* 64位转32位时参考一个checkpoint,取最接近的值
+*/
 //! \brief A 32-bit integer, expressed relative to an arbitrary initial sequence number (ISN)
 //! \note This is used to express TCP sequence numbers (seqno) and acknowledgment numbers (ackno)
 class WrappingInt32 {
@@ -13,7 +16,6 @@ class WrappingInt32 {
   public:
     //! Construct from a raw 32-bit unsigned integer
     explicit WrappingInt32(uint32_t raw_value) : _raw_value(raw_value) {}
-
     uint32_t raw_value() const { return _raw_value; }  //!< Access raw stored value
 };
 
