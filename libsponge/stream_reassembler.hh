@@ -82,6 +82,11 @@ class StreamReassembler {
     //! \brief Is the internal state empty (other than the output stream)?
     //! \returns `true` if no substrings are waiting to be assembled
     bool empty() const;
+public:
+    // 增加一个接口：返回ack
+    size_t ack() const {
+        return this->_ack;
+    }
 };
 
 #endif  // SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH
