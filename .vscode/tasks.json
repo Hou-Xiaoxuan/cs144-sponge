@@ -19,12 +19,19 @@
             "args": [
                 "-g",
                 "-o0",
-                "${workspaceRoot}/.temp/testLab1.cpp", // 写死调试的文件
+                "${workspaceRoot}/.temp/testLab2.cpp", // 写死调试的文件
                 "${workspaceRoot}/libsponge/*.cc",
+                "${workspaceRoot}/libsponge/tcp_helpers/*.cc",
+
+                "${workspaceRoot}/libsponge/util/*.cc",
                 "-o",
                 "${workspaceRoot}/.temp/main.out",
                 "-I",
                 "${workspaceRoot}/libsponge",
+                "-I",
+                "${workspaceRoot}/libsponge/tcp_helpers",
+                "-I",
+                "${workspaceRoot}/libsponge/util",
                 ""
             ],
             "group": {
