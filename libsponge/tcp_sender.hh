@@ -89,4 +89,20 @@ class TCPSender {
     //!@}
 };
 
+class Stream_Retransmiter
+{
+private:
+    bool _is_start = false;                                         // 计时器状态
+    size_t _timer = false;                                          // 当前时间， 随invoke()更新
+    size_t _consecutive_retransmissions = 0;                         // 连续重传次数
+    std::queue<std::pair<TCPSegment, size_t>> _outgoing_segment;    // 保存的数据
+    size_t _last_ack_seqno = 0;                                     // 上一个ack的标号
+public:
+    Stream_Retransmiter();
+    void invoke(size_t time_now, bool window_zero); // 更新时间
+    void start();                                   // (重新)开始计数
+    void push(TCPSegment seg);
+    size_t last_ack_seqno() const { return this->_last_ack_seqno; }
+    size_t consecutive_retransmissions() const { return this->_consecutive_retransmissions; }
+};
 #endif  // SPONGE_LIBSPONGE_TCP_SENDER_HH
