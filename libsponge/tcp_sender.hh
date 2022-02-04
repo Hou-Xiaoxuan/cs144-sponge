@@ -92,16 +92,28 @@ class TCPSender {
 class Stream_Retransmiter
 {
 private:
-    bool _is_start = false;                                         // 计时器状态
-    size_t _timer = false;                                          // 当前时间， 随invoke()更新
-    size_t _consecutive_retransmissions = 0;                         // 连续重传次数
-    std::queue<std::pair<TCPSegment, size_t>> _outgoing_segment;    // 保存的数据
-    size_t _last_ack_seqno = 0;                                     // 上一个ack的标号
+    // 两个重复的量，想要去掉
+    // TODO::优化掉这些重复变量
+    std::queue<TCPSegment> &_segments_out;
+    unsigned int &_initial_retransmission_timeout;
+    WrappingInt32 &_isn;
+
+    unsigned int rto;
+    bool _is_start = false;                                             // 计时器状态
+    size_t _timer = false;                                              // 当前时间， 随invoke()更新
+    size_t _consecutive_retransmissions = 0;                            // 连续重传次数
+    std::queue<TCPSegment> _outgoing_segment = {};        // 保存的数据
+    size_t _last_ack_seqno = 0;                                         // 上一个ack的标号
+    // 检测并处理超时
+    bool _check_time();
 public:
-    Stream_Retransmiter();
-    void invoke(size_t time_now, bool window_zero); // 更新时间
-    void start();                                   // (重新)开始计数
-    void push(TCPSegment seg);
+    Stream_Retransmiter(std::queue<TCPSegment> &_segments_out, unsigned int &initial_retransmission_timeout, WrappingInt32 &isn);
+    void update_time(size_t time_now, bool window_zero);    // 更新时间
+    void invoke(size_t ack_seqno);                          // 受到ack
+    void start();                                           // (重新)开始计数
+    void stop();                                           //  停止计数
+
+    void push(const TCPSegment &seg);
     size_t last_ack_seqno() const { return this->_last_ack_seqno; }
     size_t consecutive_retransmissions() const { return this->_consecutive_retransmissions; }
 };
