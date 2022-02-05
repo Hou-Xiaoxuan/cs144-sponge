@@ -20,26 +20,76 @@ using namespace std;
 TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const std::optional<WrappingInt32> fixed_isn)
     : _isn(fixed_isn.value_or(WrappingInt32{random_device()()}))
     , _initial_retransmission_timeout{retx_timeout}
-    , _stream(capacity) {}
+    , _stream(capacity) 
+    , _timer(_segments_out, _initial_retransmission_timeout, _isn) {}
 
 uint64_t TCPSender::bytes_in_flight() const { return {}; }
 
-void TCPSender::fill_window() {}
+void TCPSender::fill_window()
+{
+    if(this->_window_size == 0)
+    {
+        // act asif window-size is 1.
+        this->_send_byte(1ul);
+    }
+    else
+    {
+        while(this->_window_size > 0u and this->_stream.buffer_size() > 0ul)
+        {
+            size_t num = min(min(
+                static_cast<size_t>(_window_size), 
+                this->_stream.buffer_size()), 
+                TCPConfig::MAX_PAYLOAD_SIZE);
+            if(num > 0ul){
+                this->_send_byte(num);
+            }
+        }
+    }
+}
 
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
-void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) { DUMMY_CODE(ackno, window_size); }
+void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size)
+{
+    size_t ack_seqno = unwrap(ackno, this->_isn, this->_timer.last_ack_seqno());
+    this->_timer.invoke(ack_seqno);
+    this->_window_size = window_size;
+}
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
-void TCPSender::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+void TCPSender::tick(const size_t ms_since_last_tick){ 
+    this->_timer.update_time(ms_since_last_tick, this->_window_size == 0u);
+}
 
-unsigned int TCPSender::consecutive_retransmissions() const { return {}; }
+unsigned int TCPSender::consecutive_retransmissions() const { 
+    return this->_timer.consecutive_retransmissions();
+}
 
-void TCPSender::send_empty_segment() {}
+void TCPSender::send_empty_segment()
+{
+    // 发送一个空的segment，不占据sqono，不需要重发
+    TCPSegment seg;
+    seg.header().seqno = this->next_seqno();
+    this->_segments_out.push(seg);
+}
+
+void TCPSender::_send_byte(const size_t num)
+{
+    // SYN的报文似乎不应该携带数据
+    TCPSegment seg;
+    if(this->next_seqno_absolute() == 0ul){
+        seg.header().syn = true;
+    }
+
+    std::string data = this->_stream.read(num);
+    Buffer buf(std::move(data));
+    seg.payload() = buf;
+}
 
 
 /*
-stream_retransmiter*/
+stream_retransmiter
+*/
 Stream_Retransmiter:: Stream_Retransmiter(queue<TCPSegment> &segments_out, unsigned int &initial_retransmission_timeout, WrappingInt32 &isn):
     _segments_out(segments_out), 
     _initial_retransmission_timeout(initial_retransmission_timeout), 
@@ -50,7 +100,7 @@ Stream_Retransmiter:: Stream_Retransmiter(queue<TCPSegment> &segments_out, unsig
 // 检测并重发, 返回是否发生了重发
 bool Stream_Retransmiter::_check_time()
 {
-    if(this->_timer > this->rto)
+    if(this->_time > this->rto)
     {
         // 超时
         this->_segments_out.push(this->_outgoing_segment.front());
@@ -61,7 +111,7 @@ bool Stream_Retransmiter::_check_time()
 
 void Stream_Retransmiter:: update_time(size_t time_add, bool window_zero)
 {
-    this->_timer += time_add;
+    this->_time += time_add;
     if(this->_outgoing_segment.empty() == false and this->_check_time())
     {
         this->start();
@@ -109,11 +159,11 @@ void Stream_Retransmiter:: start()
     if(this->_is_start == false)
     {
         this->_is_start = true;
-        this->_timer = 0;
+        this->_time = 0;
     }
     else
     {
-        this->_timer = 0;
+        this->_time = 0;
     }
 }
 

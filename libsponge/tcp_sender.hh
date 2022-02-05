@@ -15,9 +15,39 @@
 //! segments, keeps track of which segments are still in-flight,
 //! maintains the Retransmission Timer, and retransmits in-flight
 //! segments if the retransmission timer expires.
+class Stream_Retransmiter
+{
+private:
+    // 两个重复的量，想要去掉
+    // TODO::优化掉这些重复变量
+    std::queue<TCPSegment> &_segments_out;
+    unsigned int &_initial_retransmission_timeout;
+    WrappingInt32 &_isn;
+
+    unsigned int rto;
+    bool _is_start = false;                                             // 计时器状态
+    size_t _time = false;                                              // 当前时间， 随invoke()更新
+    size_t _consecutive_retransmissions = 0;                            // 连续重传次数
+    std::queue<TCPSegment> _outgoing_segment = {};                      // 保存的数据
+    size_t _last_ack_seqno = 0;                                         // 上一个ack的标号
+    // 检测并处理超时
+    bool _check_time();
+public:
+    Stream_Retransmiter(std::queue<TCPSegment> &_segments_out, unsigned int &initial_retransmission_timeout, WrappingInt32 &isn);
+    void update_time(size_t time_now, bool window_zero);    // 更新时间
+    void invoke(size_t ack_seqno);                          // 受到ack
+    void start();                                           // (重新)开始计数
+    void stop();                                           //  停止计数
+
+    void push(const TCPSegment &seg);
+    size_t last_ack_seqno() const { return this->_last_ack_seqno; }
+    size_t consecutive_retransmissions() const { return this->_consecutive_retransmissions; }
+};
+
 class TCPSender {
   private:
     //! our initial sequence number, the number for our SYN.
+
     WrappingInt32 _isn;
 
     //! outbound queue of segments that the TCPSender wants sent
@@ -32,6 +62,17 @@ class TCPSender {
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
+    // 计时器
+    Stream_Retransmiter _timer;
+
+    // window_size
+    uint16_t _window_size = 1u;
+
+    // 是否建立连接
+    bool _syn = false;
+
+    // 发送最多num比特的数据
+    void _send_byte(const size_t num);
   public:
     //! Initialize a TCPSender
     TCPSender(const size_t capacity = TCPConfig::DEFAULT_CAPACITY,
@@ -89,32 +130,4 @@ class TCPSender {
     //!@}
 };
 
-class Stream_Retransmiter
-{
-private:
-    // 两个重复的量，想要去掉
-    // TODO::优化掉这些重复变量
-    std::queue<TCPSegment> &_segments_out;
-    unsigned int &_initial_retransmission_timeout;
-    WrappingInt32 &_isn;
-
-    unsigned int rto;
-    bool _is_start = false;                                             // 计时器状态
-    size_t _timer = false;                                              // 当前时间， 随invoke()更新
-    size_t _consecutive_retransmissions = 0;                            // 连续重传次数
-    std::queue<TCPSegment> _outgoing_segment = {};        // 保存的数据
-    size_t _last_ack_seqno = 0;                                         // 上一个ack的标号
-    // 检测并处理超时
-    bool _check_time();
-public:
-    Stream_Retransmiter(std::queue<TCPSegment> &_segments_out, unsigned int &initial_retransmission_timeout, WrappingInt32 &isn);
-    void update_time(size_t time_now, bool window_zero);    // 更新时间
-    void invoke(size_t ack_seqno);                          // 受到ack
-    void start();                                           // (重新)开始计数
-    void stop();                                           //  停止计数
-
-    void push(const TCPSegment &seg);
-    size_t last_ack_seqno() const { return this->_last_ack_seqno; }
-    size_t consecutive_retransmissions() const { return this->_consecutive_retransmissions; }
-};
 #endif  // SPONGE_LIBSPONGE_TCP_SENDER_HH
