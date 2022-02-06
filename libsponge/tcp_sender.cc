@@ -23,14 +23,37 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
     , _stream(capacity) 
     , _timer(_segments_out, _initial_retransmission_timeout, _isn) {}
 
-uint64_t TCPSender::bytes_in_flight() const { return {}; }
+uint64_t TCPSender::bytes_in_flight() const { return this->_timer.bytes_in_flight(); }
 
 void TCPSender::fill_window()
 {
+    /*SYN和FIN都不建议携带数据*/
+
+    // 没有建立连接，发送SYN
+    if(this->next_seqno_absolute() == 0)
+    {
+        TCPSegment seg;
+        seg.header().syn = true;
+        this->_send_byte(std::move(seg), 0);
+        return;
+    }
+    // 数据发送完毕，但是还没有全部确认 发送FIN
+    if(this->_stream.eof()
+        and this->next_seqno_absolute() == this->_stream.bytes_written() + 2
+        and this->bytes_in_flight() > 0)
+    {
+        
+        TCPSegment seg;
+        seg.header().fin = true;
+        this->_send_byte(std::move(seg), 0);
+        return;
+    }
+
+    /*正常发送数据*/
     if(this->_window_size == 0)
     {
         // act asif window-size is 1.
-        this->_send_byte(1ul);
+        this->_send_byte(TCPSegment(), 1ul);
     }
     else
     {
@@ -41,7 +64,7 @@ void TCPSender::fill_window()
                 this->_stream.buffer_size()), 
                 TCPConfig::MAX_PAYLOAD_SIZE);
             if(num > 0ul){
-                this->_send_byte(num);
+                this->_send_byte(TCPSegment(), num);
             }
         }
     }
@@ -73,17 +96,19 @@ void TCPSender::send_empty_segment()
     this->_segments_out.push(seg);
 }
 
-void TCPSender::_send_byte(const size_t num)
+void TCPSender::_send_byte(TCPSegment &&seg, const size_t num)
 {
-    // SYN的报文似乎不应该携带数据
-    TCPSegment seg;
-    if(this->next_seqno_absolute() == 0ul){
-        seg.header().syn = true;
+    // 填充报文
+    if(num > 0ul){
+        std::string data = this->_stream.read(num);
+        Buffer buf(std::move(data));
+        seg.payload() = buf;
     }
-
-    std::string data = this->_stream.read(num);
-    Buffer buf(std::move(data));
-    seg.payload() = buf;
+    
+    // 计算seqno
+    seg.header().seqno = wrap(this->next_seqno_absolute(), this->_isn);
+    this->_next_seqno += seg.length_in_sequence_space();
+    this->_timer.push(std::move(seg));
 }
 
 
@@ -174,7 +199,7 @@ void Stream_Retransmiter:: stop()
     this->_is_start = false;
 }
 
-void Stream_Retransmiter:: push(const TCPSegment &seg)
+void Stream_Retransmiter:: push(const TCPSegment &&seg)
 {
     this->_outgoing_segment.push(seg);
     // 增加bytes_in_flight

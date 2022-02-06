@@ -39,7 +39,7 @@ public:
     void invoke(size_t ack_seqno);                          // 受到ack
     void start();                                           // (重新)开始计数
     void stop();                                           //  停止计数
-    void push(const TCPSegment &seg);
+    void push(const TCPSegment &&seg);
 
     size_t last_ack_seqno() const { return this->_last_ack_seqno; }
     size_t consecutive_retransmissions() const { return this->_consecutive_retransmissions; }
@@ -73,8 +73,8 @@ class TCPSender {
     // 是否建立连接
     bool _syn = false;
 
-    // 发送最多num比特的数据
-    void _send_byte(const size_t num);
+    // 填充并发送数据，需要更改类内信息
+    void _send_byte(TCPSegment &&seg, const size_t num);
   public:
     //! Initialize a TCPSender
     TCPSender(const size_t capacity = TCPConfig::DEFAULT_CAPACITY,
@@ -97,7 +97,9 @@ class TCPSender {
     void send_empty_segment();
 
     //! \brief create and send segments to fill as much of the window as possible
+    // 需要根据状态填充信息
     void fill_window();
+    
 
     //! \brief Notifies the TCPSender of the passage of time
     void tick(const size_t ms_since_last_tick);
