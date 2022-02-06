@@ -23,6 +23,7 @@ private:
     std::queue<TCPSegment> &_segments_out;
     unsigned int &_initial_retransmission_timeout;
     WrappingInt32 &_isn;
+    size_t _bytes_in_flight = 0;
 
     unsigned int rto;
     bool _is_start = false;                                             // 计时器状态
@@ -38,10 +39,11 @@ public:
     void invoke(size_t ack_seqno);                          // 受到ack
     void start();                                           // (重新)开始计数
     void stop();                                           //  停止计数
-
     void push(const TCPSegment &seg);
+
     size_t last_ack_seqno() const { return this->_last_ack_seqno; }
     size_t consecutive_retransmissions() const { return this->_consecutive_retransmissions; }
+    size_t bytes_in_flight() const { return this->_bytes_in_flight; }
 };
 
 class TCPSender {
