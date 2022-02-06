@@ -72,7 +72,8 @@ class TCPSender {
 
     // 是否建立连接
     bool _syn = false;
-
+    // 是否断开连接
+    bool _fin = false;
     // 填充并发送数据，需要更改类内信息
     void _send_byte(TCPSegment &&seg, const size_t num);
   public:

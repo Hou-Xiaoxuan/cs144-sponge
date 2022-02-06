@@ -28,7 +28,7 @@ uint64_t TCPSender::bytes_in_flight() const { return this->_timer.bytes_in_fligh
 void TCPSender::fill_window()
 {
     /*SYN和FIN都不建议携带数据*/
-
+    
     // 没有建立连接，发送SYN
     if(this->next_seqno_absolute() == 0)
     {
@@ -38,9 +38,44 @@ void TCPSender::fill_window()
         return;
     }
     // 数据发送完毕，但是还没有全部确认 发送FIN
+
+    /*正常发送数据*/
+    // _window_size不应该被直接减少
+    // 发送但是没有ack的数据仍然占据了一定的window_size
+    // 这里根据window_size和bytes_in_flight计算出仍然可以发送的数据量
+    size_t cur_window_size = this->_window_size == 0? 1: 
+        (this->_window_size > this->bytes_in_flight()? this->_window_size - this->bytes_in_flight(): 0);
+
+    while(cur_window_size > 0u)
+    {
+        size_t num = min(min(
+            cur_window_size, 
+            this->_stream.buffer_size()), 
+            TCPConfig::MAX_PAYLOAD_SIZE);
+        TCPSegment seg;
+        // 是否添加fin, 不能直接使用eof判断
+        if(this->_stream.input_ended()
+        and this->_stream.buffer_size() == num
+        and cur_window_size > 0
+        and this->_fin == false)
+        {
+            seg.header().fin = true;
+            this->_fin = true;
+            cur_window_size --;
+        }
+        if(num > 0ul or seg.header().fin == true){
+            this->_send_byte(std::move(seg), num);
+            cur_window_size -= num;
+        }else{
+            break;
+        }
+    }
+
+    // 发送FIN报文
     if(this->_stream.eof()
-        and this->next_seqno_absolute() == this->_stream.bytes_written() + 2
-        and this->bytes_in_flight() > 0)
+        and this->_stream.buffer_size() == 0ul
+        and cur_window_size > 0
+        and this->_fin == false)
     {
         
         TCPSegment seg;
@@ -49,25 +84,7 @@ void TCPSender::fill_window()
         return;
     }
 
-    /*正常发送数据*/
-    if(this->_window_size == 0)
-    {
-        // act asif window-size is 1.
-        this->_send_byte(TCPSegment(), 1ul);
-    }
-    else
-    {
-        while(this->_window_size > 0u and this->_stream.buffer_size() > 0ul)
-        {
-            size_t num = min(min(
-                static_cast<size_t>(_window_size), 
-                this->_stream.buffer_size()), 
-                TCPConfig::MAX_PAYLOAD_SIZE);
-            if(num > 0ul){
-                this->_send_byte(TCPSegment(), num);
-            }
-        }
-    }
+    
 }
 
 //! \param ackno The remote receiver's ackno (acknowledgment number)
@@ -77,6 +94,9 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     size_t ack_seqno = unwrap(ackno, this->_isn, this->_timer.last_ack_seqno());
     this->_timer.invoke(ack_seqno);
     this->_window_size = window_size;
+
+    // 这个方法需要重新调用fill_window()
+    this->fill_window();
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
@@ -110,7 +130,6 @@ void TCPSender::_send_byte(TCPSegment &&seg, const size_t num)
     size_t seq_add = seg.length_in_sequence_space();
     this->_timer.push(std::move(seg));
     this->_next_seqno += seq_add;
-    this->_window_size -= seq_add;
 }
 
 
@@ -132,7 +151,7 @@ Stream_Retransmiter:: Stream_Retransmiter(queue<TCPSegment> &segments_out, unsig
 // 检测并重发, 返回是否发生了重发
 bool Stream_Retransmiter::_check_time()
 {
-    if(this->_time > this->rto)
+    if(this->_time >= this->rto)
     {
         // 超时
         this->_segments_out.push(this->_outgoing_segment.front());
@@ -160,6 +179,7 @@ void Stream_Retransmiter::invoke(size_t ack_seqno)
 {
     // 更新outgoing队列
     bool flag = false;
+    this->_last_ack_seqno = max(this->_last_ack_seqno, ack_seqno);
     while(this->_outgoing_segment.empty() == false)
     {
         auto &seg = this->_outgoing_segment.front();
