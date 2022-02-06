@@ -43,8 +43,11 @@ void TCPSender::fill_window()
     // _window_size不应该被直接减少
     // 发送但是没有ack的数据仍然占据了一定的window_size
     // 这里根据window_size和bytes_in_flight计算出仍然可以发送的数据量
-    size_t cur_window_size = this->_window_size == 0? 1: 
-        (this->_window_size > this->bytes_in_flight()? this->_window_size - this->bytes_in_flight(): 0);
+    // 如果没有等待ack的数据报，且window_size==0，按照1处理，来获取进一步变化
+    size_t cur_window_size = this->_window_size == 0? 1: this->_window_size;
+    if(this->bytes_in_flight() > 0ul){
+        cur_window_size = this->_window_size > this->bytes_in_flight()? this->_window_size - this->bytes_in_flight(): 0;
+    }
 
     while(cur_window_size > 0u)
     {
@@ -56,7 +59,7 @@ void TCPSender::fill_window()
         // 是否添加fin, 不能直接使用eof判断
         if(this->_stream.input_ended()
         and this->_stream.buffer_size() == num
-        and cur_window_size > 0
+        and cur_window_size > num
         and this->_fin == false)
         {
             seg.header().fin = true;
@@ -70,20 +73,6 @@ void TCPSender::fill_window()
             break;
         }
     }
-
-    // 发送FIN报文
-    if(this->_stream.eof()
-        and this->_stream.buffer_size() == 0ul
-        and cur_window_size > 0
-        and this->_fin == false)
-    {
-        
-        TCPSegment seg;
-        seg.header().fin = true;
-        this->_send_byte(std::move(seg), 0);
-        return;
-    }
-
     
 }
 
@@ -177,9 +166,14 @@ void Stream_Retransmiter:: update_time(size_t time_add, bool window_zero)
 
 void Stream_Retransmiter::invoke(size_t ack_seqno)
 {
+    // 排除不合法的ack_sqono
+    if(ack_seqno < this->_last_ack_seqno or ack_seqno > this->_last_ack_seqno + this->_bytes_in_flight){
+        return;
+    }
+
     // 更新outgoing队列
     bool flag = false;
-    this->_last_ack_seqno = max(this->_last_ack_seqno, ack_seqno);
+    this->_last_ack_seqno = ack_seqno;
     while(this->_outgoing_segment.empty() == false)
     {
         auto &seg = this->_outgoing_segment.front();

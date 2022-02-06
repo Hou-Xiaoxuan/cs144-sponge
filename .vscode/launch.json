@@ -28,7 +28,7 @@
             "name": "调试特定test",
             "type": "cppdbg",
             "request": "launch", 
-            "program": "${workspaceRoot}/build_arch/tests/send_window",
+            "program": "${workspaceRoot}/build_arch/tests/send_extra",
             "stopAtEntry": false,
             "externalConsole": false,
             "internalConsoleOptions": "neverOpen",
