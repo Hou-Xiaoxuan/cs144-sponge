@@ -107,8 +107,10 @@ void TCPSender::_send_byte(TCPSegment &&seg, const size_t num)
     
     // 计算seqno
     seg.header().seqno = this->next_seqno();
-    this->_next_seqno += seg.length_in_sequence_space();
+    size_t seq_add = seg.length_in_sequence_space();
     this->_timer.push(std::move(seg));
+    this->_next_seqno += seq_add;
+    this->_window_size -= seq_add;
 }
 
 
