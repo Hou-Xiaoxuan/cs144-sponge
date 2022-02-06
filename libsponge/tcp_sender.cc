@@ -106,10 +106,15 @@ void TCPSender::_send_byte(TCPSegment &&seg, const size_t num)
     }
     
     // 计算seqno
-    seg.header().seqno = wrap(this->next_seqno_absolute(), this->_isn);
+    seg.header().seqno = this->next_seqno();
     this->_next_seqno += seg.length_in_sequence_space();
     this->_timer.push(std::move(seg));
 }
+
+
+
+
+
 
 
 /*
@@ -157,12 +162,17 @@ void Stream_Retransmiter::invoke(size_t ack_seqno)
     {
         auto &seg = this->_outgoing_segment.front();
         size_t seqno = unwrap(seg.header().seqno, this->_isn, this->_last_ack_seqno) + seg.length_in_sequence_space();
-        if(ack_seqno > seqno)
+        if(ack_seqno >= seqno)
         {
             flag = true;
             size_t sub = this->_outgoing_segment.front().length_in_sequence_space();
             this->_outgoing_segment.pop();
             this->_bytes_in_flight -= sub;
+        }
+        else
+        {
+            // 从前往后检查是否已经确认。无法确认时停止
+            break;
         }
     }
     if(flag == true)
@@ -201,6 +211,8 @@ void Stream_Retransmiter:: stop()
 
 void Stream_Retransmiter:: push(const TCPSegment &&seg)
 {
+    // 发送并放入outgoing队列
+    this->_segments_out.push(seg);
     this->_outgoing_segment.push(seg);
     // 增加bytes_in_flight
     this->_bytes_in_flight += seg.length_in_sequence_space();
