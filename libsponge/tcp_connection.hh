@@ -21,6 +21,17 @@ class TCPConnection {
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
 
+    size_t _time_now{0};
+    size_t _last_receive_time{0};
+    bool _active{false};
+
+    // 检查_sender的队列并发送数据
+    void _clear_segs();
+
+    // 发送rto
+    void _send_rst();
+
+    void _check_active();
   public:
     //! \name "Input" interface for the writer
     //!@{
