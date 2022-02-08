@@ -113,13 +113,12 @@ void TCPConnection::segment_received(const TCPSegment &seg)
 
     this->_receiver.segment_received(seg); // 接受报文
     
-    // Note: 
     if(seg.header().ack == true){ // 这里应该总是为真
         // 没有ack则不调用ack_received
         this->_sender.ack_received(seg.header().ackno, seg.header().win); // 获取信息
     }
 
-    cout<<seg.header().to_string()<<endl;
+    // cout<<seg.header().to_string()<<endl;
     // LISTEN: 还没有发送过SYN, 但是已经受到了SYN,需要主动向对方建立连接
     // Note: 测试要求不能有多余的数据包，这里应该在没有数据发送时发送空的ACK
     if(this->_sender.next_seqno_absolute() == 0ul and this->_receiver.ackno().has_value())
