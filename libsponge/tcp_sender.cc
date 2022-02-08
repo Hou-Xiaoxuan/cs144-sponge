@@ -80,7 +80,6 @@ void TCPSender::fill_window()
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size)
 {
-    cout<<"收到ack"<<ackno<<"-"<<window_size<<endl;
     size_t ack_seqno = unwrap(ackno, this->_isn, this->_timer.last_ack_seqno());
     this->_timer.invoke(ack_seqno);
     this->_window_size = window_size;

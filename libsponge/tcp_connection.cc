@@ -34,7 +34,6 @@ void TCPConnection::_clear_segs()
             seg.header().ackno = ackno.value();
         }
         seg.header().win = min<size_t>(win, std::numeric_limits<uint16_t>().max());
-        cout<<"发送一个数据包"<<": "<<seg.header().to_string()<<endl;
         this->_segments_out.push(seg);
         this->_sender.segments_out().pop();
     }
@@ -43,11 +42,21 @@ void TCPConnection::_clear_segs()
 void TCPConnection::_send_rst()
 {
     // 确保有seg
-    cout<<"发送reset"<<endl;
     this->_sender.send_empty_segment();
     auto seg = this->_sender.segments_out().front();
     seg.header().rst = true;
-    this->_segments_out.push(seg);
+
+    // Note: 发送rst后不应该再发送任何数据包。清理掉
+    queue<TCPSegment>().swap(this->_sender.segments_out());
+    // Note: 通过标准流程发送，设置ack等信息
+    this->_sender.segments_out().push(seg);
+    this->_clear_segs();
+
+    // Note: 设置状态信息
+    this->_active = false;
+    this->_sender.stream_in().set_error();
+    this->_receiver.stream_out().set_error();
+
 }
 
 void TCPConnection::_check_active()
@@ -69,11 +78,7 @@ void TCPConnection::_check_active()
             this->_active = false;
         }
     }
-    if(_active == false){
-        cout<<"结束了"<<endl;
-    }
 }
-
 void TCPConnection::segment_received(const TCPSegment &seg)
 { 
     /* 补充并明晰结束报文的工作
@@ -81,7 +86,6 @@ void TCPConnection::segment_received(const TCPSegment &seg)
     * 2. 需要接受到一个SYN后才能接受后续报文，_receiver做了这样的保证
     * 3. 在收到SYN后应该回复报文以建立连接
     */
-   cout<<"接收到报文"<<endl;
    // CLOSE
     if(this->active() == false){
         // 已经终止了
@@ -109,24 +113,28 @@ void TCPConnection::segment_received(const TCPSegment &seg)
 
     this->_receiver.segment_received(seg); // 接受报文
     
+    // Note: 
     if(seg.header().ack == true){ // 这里应该总是为真
         // 没有ack则不调用ack_received
         this->_sender.ack_received(seg.header().ackno, seg.header().win); // 获取信息
     }
 
-    // !! 回复ACK报文 // 吐槽：一直没回复，连接能建立起来就见鬼了
-    if(seg.length_in_sequence_space() > 0ul){
-        this->_sender.send_empty_segment();
-    }
-
-    // 发送可能的报文
-    this->_clear_segs();
-
+    cout<<seg.header().to_string()<<endl;
     // LISTEN: 还没有发送过SYN, 但是已经受到了SYN,需要主动向对方建立连接
+    // Note: 测试要求不能有多余的数据包，这里应该在没有数据发送时发送空的ACK
     if(this->_sender.next_seqno_absolute() == 0ul and this->_receiver.ackno().has_value())
     {
         this->connect();
     }
+    else if(seg.length_in_sequence_space() > 0ul and this->_sender.segments_out().empty() == true)
+    {
+        // !! 回复ACK报文 // 吐槽：一直没回复，连接能建立起来就见鬼了
+        this->_sender.send_empty_segment();
+    }
+
+
+    // 发送可能的报文
+    this->_clear_segs();
 
 
     /*判断是否达成#1～#3条件*/
@@ -176,7 +184,7 @@ void TCPConnection::tick(const size_t ms_since_last_tick)
     this->_sender.tick(ms_since_last_tick);
 
     // 判断是否断开连接
-    if(this->_sender.consecutive_retransmissions() >= TCPConfig::MAX_RETX_ATTEMPTS)
+    if(this->_sender.consecutive_retransmissions() > TCPConfig::MAX_RETX_ATTEMPTS)
     {
         // 发送rto断开连接
         this->_send_rst();
@@ -197,7 +205,6 @@ void TCPConnection::end_input_stream(){
 
 void TCPConnection::connect()
 {   
-    cout<<"发起建立连接"<<endl;
     // 发送一个SYN
     this->_sender.fill_window();
     // 立即发送
