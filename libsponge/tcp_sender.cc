@@ -35,6 +35,7 @@ void TCPSender::fill_window()
         TCPSegment seg;
         seg.header().syn = true;
         this->_send_byte(std::move(seg), 0);
+        this->_syn = true; // 建立连接
         return;
     }
     // 数据发送完毕，但是还没有全部确认 发送FIN
@@ -80,6 +81,10 @@ void TCPSender::fill_window()
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size)
 {
+    // Note: 没有收到_syn前不应该响应
+    if(this->_syn == false){
+        return;
+    }
     size_t ack_seqno = unwrap(ackno, this->_isn, this->_timer.last_ack_seqno());
     this->_timer.invoke(ack_seqno);
     this->_window_size = window_size;
