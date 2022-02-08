@@ -28,7 +28,7 @@
             "name": "调试特定test",
             "type": "cppdbg",
             "request": "launch", 
-            "program": "${workspaceRoot}/build_arch/tests/send_extra",
+            "program": "${workspaceRoot}/build_arch/tests/fsm_ack_rst_relaxed",
             "stopAtEntry": false,
             "externalConsole": false,
             "internalConsoleOptions": "neverOpen",
