@@ -1,5 +1,5 @@
 #include "tcp_receiver.hh"
-
+# include<iostream>
 // Dummy implementation of a TCP receiver
 
 // For Lab 2, please replace with a real implementation that passes the
@@ -17,7 +17,9 @@ void TCPReceiver::_set_syn(const TCPSegment &seg)
     // isn is the first seq-no, set now
     // ack is the next byte wanted--now, is the first seq-no
     if(seg.header().syn){
+        cout<<"收到SYN"<<seg.header().to_string()<<endl;
         this->_isn = seg.header().seqno;
+        cout<<"syn设置为true"<<endl;
         this->_syn = true;
     }
 }

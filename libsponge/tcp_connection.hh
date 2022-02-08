@@ -23,7 +23,8 @@ class TCPConnection {
 
     size_t _time_now{0};
     size_t _last_receive_time{0};
-    bool _active{false};
+    // 初始状态设置为true
+    bool _active{true};
 
     // 检查_sender的队列并发送数据
     void _clear_segs();
