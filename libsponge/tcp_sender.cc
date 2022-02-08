@@ -3,7 +3,6 @@
 #include "tcp_config.hh"
 
 #include <random>
-# include<iostream>
 // Dummy implementation of a TCP sender
 
 // For Lab 3, please replace with a real implementation that passes the
