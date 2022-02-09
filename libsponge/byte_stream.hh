@@ -3,6 +3,7 @@
 
 #include <string>
 #include <list>
+# include "buffer.hh"
 //! \brief An in-order byte stream.
 
 //! Bytes are written on the "input" side and read from the "output"
@@ -21,9 +22,9 @@ class ByteStream {
     // buffer容量
     size_t _capacity;
 
-    // std::list<char> _buffer{};
-    // 用string替代list<char>进行优化
-    std::string _buffer{};
+    // BufferList类型的_buffer
+    BufferList _buffer{};
+
     
     
 

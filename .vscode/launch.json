@@ -22,13 +22,13 @@
                 "ignoreFailures": true
             }
         ],
-        "preLaunchTask": "编译测试文件",
+        // "preLaunchTask": "编译测试文件",
     },
         {
             "name": "调试特定test",
             "type": "cppdbg",
             "request": "launch", 
-            "program": "${workspaceRoot}/build_arch/tests/fsm_ack_rst_relaxed",
+            "program": "${workspaceRoot}/build_arch/tests/byte_stream_two_writes",
             "stopAtEntry": false,
             "externalConsole": false,
             "internalConsoleOptions": "neverOpen",
