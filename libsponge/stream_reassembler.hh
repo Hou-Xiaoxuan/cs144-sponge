@@ -5,7 +5,39 @@
 
 #include <cstdint>
 #include <string>
-#include <deque>
+#include <set>
+
+/* 一个储存未排好序报文的数据结构
+* 通过储存字符串数据和index标号，来用于排序
+* 通过SharedBuffer来储存数据，避免复制
+*/
+# include "shared_buffer.hh"
+class SegmentBlock
+{
+private:
+    SharedBuffer _buffer;
+    size_t _seqno;
+public:
+    SegmentBlock() = default;
+    SegmentBlock(std::string &&s, const size_t seqno) noexcept: _buffer(std::move(s)), _seqno(seqno){};
+    SegmentBlock(const SegmentBlock &another_seg): _buffer(another_seg._buffer), _seqno(another_seg._seqno){};
+    size_t next_seqno() const { return _seqno + _buffer.size(); }
+    size_t seqno() const { return _seqno; }
+    void remove_prefix(const size_t n){
+        _buffer.remove_prefix(n);
+        this->_seqno += n;
+    }
+    void remove_subfix(const size_t n){
+        _buffer.remove_subfix(n);
+    }
+    size_t size() const { return _buffer.size(); }
+    // value
+    bool operator<(const SegmentBlock lhs) const{
+        return this->seqno() < lhs.seqno();
+    }
+    std::string_view str() const{ return _buffer.str(); }
+};
+
 /*
 * 参考一些中文的翻译和解释，任务大致如下：
 - StreamRessembler被用在TCPReviver中，将乱序、会重复的报文段重组，并放入ByteStream中
@@ -28,15 +60,18 @@
 */
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
+
 class StreamReassembler {
   private:
     // Your code here -- add private members as necessary.
 
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
-    std::deque<char> _buffer = std::deque<char>();      // 储存缓存的数据
-    std::deque<bool> _vis = std::deque<bool>();         // 标记存储过的数据
+    // 借助set内部的红黑树实现排序
+    std::set<SegmentBlock> _unassembled_buffer{};         // 未排好序的数据
+
     size_t _ack = 0;                                    // 期待的下一个标号
+    size_t _nonexsit_last = 0;                          // 不存在的最新字节标号
     size_t _unassembled_bytes = 0;                      // 未排好序的数据
     size_t _eof = size_t(-1);                           // 最后一字节的标号
 
@@ -44,13 +79,11 @@ class StreamReassembler {
     // 检查并将有序数据写入_output
     void _make_output();
 
-    // 扩充_buffer以储存新的substring。
-    // 检查容量，扩充至容忍的最大
-    // target   目标大小
-    size_t _extend_buffer(size_t target);
-
     // 返回已经占据的容量
-    size_t _exist_capacity();
+    size_t _exist_capacity() const;
+
+    // 插入片段
+    void _insert(SegmentBlock && seg);
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,

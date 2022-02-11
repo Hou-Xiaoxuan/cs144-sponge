@@ -21,7 +21,9 @@ class ByteStream {
     // buffer容量
     size_t _capacity;
 
-    std::list<char> _buffer{};
+    // std::list<char> _buffer{};
+    // 用string替代list<char>进行优化
+    std::string _buffer{};
     
     
 

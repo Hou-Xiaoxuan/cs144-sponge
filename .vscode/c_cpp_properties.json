@@ -4,7 +4,9 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/libsponge/**"
+                "${workspaceFolder}/libsponge/**",
+                "${workspaceFolder}/libsponge/util/**"
+
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
