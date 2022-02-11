@@ -5,7 +5,7 @@
  * @Date: 2022-02-10 17:11:24
  * @Description: 
  * @LastEditors: LinXuan
- * @LastEditTime: 2022-02-10 17:58:07
+ * @LastEditTime: 2022-02-11 01:35:16
  * @FilePath: /sponge/libsponge/util/shared_buffer.hh
  */
 // 全部函数在头文件实现
@@ -59,7 +59,7 @@ public:
     }
     void remove_subfix(const size_t n){
         if(n > this->size()){
-            throw std::out_of_range("sharedBuffer:: remove_prefix");
+            throw std::out_of_range("sharedBuffer:: remove_subfix");
         }
         this->_ending -= n;
         if(_storage and  this->size() == 0ul){

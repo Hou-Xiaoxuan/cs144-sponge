@@ -19,13 +19,49 @@
             "args": [
                 "-g",
                 "-o0",
-                "${workspaceRoot}/.temp/testLab2.cpp", // 写死调试的文件
+                "${workspaceRoot}/.temp/testLab1.cpp", // 写死调试的文件
                 "${workspaceRoot}/libsponge/*.cc",
                 "${workspaceRoot}/libsponge/tcp_helpers/*.cc",
 
                 "${workspaceRoot}/libsponge/util/*.cc",
                 "-o",
                 "${workspaceRoot}/.temp/main.out",
+                "-I",
+                "${workspaceRoot}/libsponge",
+                "-I",
+                "${workspaceRoot}/libsponge/tcp_helpers",
+                "-I",
+                "${workspaceRoot}/libsponge/util",
+                ""
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }, 
+        {
+            "presentation": {
+                "echo": false,
+                "revealProblems": "onProblem",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true,
+            },
+            "isBackground": false,
+            "label": "Compile testReas.cc",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-g",
+                "-o0",
+                "${workspaceRoot}/.temp/testReas.cc", // 写死调试的文件
+                "${workspaceRoot}/libsponge/byte_stream.cc",
+                "${workspaceRoot}/libsponge/stream_reassembler.cc",
+                
+                "-o",
+                "${workspaceRoot}/.temp/testReas",
                 "-I",
                 "${workspaceRoot}/libsponge",
                 "-I",

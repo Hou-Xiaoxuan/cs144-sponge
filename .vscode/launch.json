@@ -22,13 +22,13 @@
                 "ignoreFailures": true
             }
         ],
-        // "preLaunchTask": "编译测试文件",
+        "preLaunchTask": "编译测试文件",
     },
         {
             "name": "调试特定test",
             "type": "cppdbg",
             "request": "launch", 
-            "program": "${workspaceRoot}/build_arch/tests/byte_stream_two_writes",
+            "program": "${workspaceRoot}/build_arch/tests/fsm_stream_reassembler_overlapping",
             "stopAtEntry": false,
             "externalConsole": false,
             "internalConsoleOptions": "neverOpen",
@@ -82,6 +82,29 @@
       "program": "${file}",
       "console": "integratedTerminal"
     },
-    
+    {
+        "name": "调试testReas.cc",
+        "type": "cppdbg",
+        "request": "launch", 
+        "program": "${workspaceRoot}/.temp/testReas",
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/.temp/",
+        "externalConsole": false,
+        "internalConsoleOptions": "neverOpen",
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "为 gdb 启用整齐打印",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description":  "将反汇编风格设置为 Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            }
+        ],
+        "preLaunchTask": "Compile testReas.cc",
+    },
   ]
 }
