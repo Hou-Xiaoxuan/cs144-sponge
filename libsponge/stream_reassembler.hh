@@ -80,10 +80,13 @@ class StreamReassembler {
     void _make_output();
 
     // 返回已经占据的容量
-    size_t _exist_capacity() const;
+    inline size_t _exist_capacity() const;
 
     // 插入片段
-    void _insert(SegmentBlock && seg);
+    inline void _insert(SegmentBlock && seg);
+
+    // 拆分push_string逻辑中的分隔部分
+    void _make_cut(SegmentBlock &&seg);
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,
