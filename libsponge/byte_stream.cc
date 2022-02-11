@@ -20,7 +20,7 @@ ByteStream::ByteStream(const size_t capacity):_capacity(capacity)
 size_t ByteStream::write(const string &data) {
     // 容量不够时，写入到最大
     size_t written = min(this->remaining_capacity(), data.size());
-    this->_buffer.append(data.substr(0ul, written));
+    this->_buffer.append(Buffer(data.substr(0ul, written)));
     this->tot_written += written;
     return written;
 }
@@ -29,9 +29,21 @@ size_t ByteStream::write(const string &data) {
 string ByteStream::peek_output(const size_t len) const {
     if(len > this->buffer_size())
     {
-        return "";
+        throw std::out_of_range("len biger than size of bytestream");
     }
-    string ret = this->_buffer.substr(0ul, len);
+    auto bufs = this->_buffer.buffers();
+    auto ite = bufs.begin();
+    string ret = string();
+
+    while(ret.size() < len){
+        if(ret.size() + ite->str().size() <= len){
+            ret.append(ite->str());
+        }
+        else {
+            ret.append(ite->str().substr(0ul, len - ret.size()));
+        }
+        ite++;
+    }
     return ret;
 }
 
@@ -42,7 +54,7 @@ void ByteStream::pop_output(const size_t len) {
         set_error();
         return;
     }
-    this->_buffer.assign(this->_buffer.substr(len, this->_buffer.size() - len));
+    this->_buffer.remove_prefix(len);
     this->tot_read += len;
 }
 
