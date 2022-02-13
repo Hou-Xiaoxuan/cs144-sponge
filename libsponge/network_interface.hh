@@ -8,6 +8,7 @@
 #include <optional>
 #include <queue>
 
+#include <unordered_map>
 //! \brief A "network interface" that connects IP (the internet layer, or network layer)
 //! with Ethernet (the network access layer, or link layer).
 
@@ -40,6 +41,17 @@ class NetworkInterface {
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
 
+    // EthernetAddress的哈希函数
+    size_t time_now{};      // 当前时间
+    std::unordered_map<uint32_t, std::pair<EthernetAddress, size_t>> _cache{};            // 缓存，超过30s清除 key=IPV4 address numric, value = pair(EthernetAddress, set time)
+    // 每次tick需要遍历这两个表更新时间
+    std::unordered_map<uint32_t, size_t> _requested{};                                    // 防止洪泛，最近请求过mac的ip地址，受到回复删除，否则没过5s重发
+    std::unordered_map<uint32_t, std::queue<EthernetFrame>> _frames_que{};                // 没有发出去的数据包缓存，lab中不记录时间，不清除
+
+    // 收到报文后更新缓存
+    void _update_cache(uint32_t ip, EthernetAddress ethernet);    
+    // 发送目标ip的request广播，需要检查是否已经发送过
+    void _send_request(uint32_t ip);                              
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
     NetworkInterface(const EthernetAddress &ethernet_address, const Address &ip_address);
@@ -61,6 +73,7 @@ class NetworkInterface {
     std::optional<InternetDatagram> recv_frame(const EthernetFrame &frame);
 
     //! \brief Called periodically when time elapses
+    // 更新所有时间，删除超时的cache，重发超时的request
     void tick(const size_t ms_since_last_tick);
 };
 
