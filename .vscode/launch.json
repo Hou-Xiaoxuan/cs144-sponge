@@ -28,7 +28,7 @@
             "name": "调试特定test",
             "type": "cppdbg",
             "request": "launch", 
-            "program": "${workspaceRoot}/build_arch/tests/fsm_stream_reassembler_overlapping",
+            "program": "${workspaceRoot}/build_arch/tests/net_interface",
             "stopAtEntry": false,
             "externalConsole": false,
             "internalConsoleOptions": "neverOpen",
