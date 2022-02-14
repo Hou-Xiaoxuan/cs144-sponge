@@ -41,17 +41,17 @@ class NetworkInterface {
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
 
-    // EthernetAddress的哈希函数
-    size_t time_now{};      // 当前时间
     std::unordered_map<uint32_t, std::pair<EthernetAddress, size_t>> _cache{};            // 缓存，超过30s清除 key=IPV4 address numric, value = pair(EthernetAddress, set time)
     // 每次tick需要遍历这两个表更新时间
-    std::unordered_map<uint32_t, size_t> _requested{};                                    // 防止洪泛，最近请求过mac的ip地址，受到回复删除，否则没过5s重发
-    std::unordered_map<uint32_t, std::queue<EthernetFrame>> _frames_que{};                // 没有发出去的数据包缓存，lab中不记录时间，不清除
+    std::unordered_map<uint32_t, size_t> _requested_que{};                                    // 防止洪泛，最近请求过mac的ip地址，受到回复删除，否则没过5s重发
+    std::unordered_map<uint32_t, std::queue<InternetDatagram>> _frames_que{};                 // 没有发出去的数据包缓存，lab中不记录时间，不清除
 
     // 收到报文后更新缓存
-    void _update_cache(uint32_t ip, EthernetAddress ethernet);    
-    // 发送目标ip的request广播，需要检查是否已经发送过
-    void _send_request(uint32_t ip);                              
+    void _update_cache(const uint32_t ip, const EthernetAddress ethernet);    
+    // 发送目标arp报文
+    bool _send_arp_message(const uint32_t ip, const bool is_request);
+    // 发送目标ip报文
+    bool _send_internet_message(const EthernetAddress &ethernet, const InternetDatagram &dgram);                             
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
     NetworkInterface(const EthernetAddress &ethernet_address, const Address &ip_address);
