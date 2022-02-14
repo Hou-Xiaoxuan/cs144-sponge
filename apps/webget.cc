@@ -20,7 +20,8 @@ void get_URL(const string &host, const string &path) {
     // cout<<"开始"<<endl;
 
     // TCPSocket tcp_socket;
-    CS144TCPSocket tcp_socket;
+    // CS144TCPSocket tcp_socket;
+    FullStackSocket tcp_socket;
     // 客户端使用connect建立连接
     tcp_socket.connect(Address(host, "http"));
     // 发送get请求
