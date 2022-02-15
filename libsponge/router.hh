@@ -49,6 +49,36 @@ class Router {
     //! datagram's destination address.
     void route_one_datagram(InternetDatagram &dgram);
 
+    // 路由表项
+    struct TableItem{
+        uint32_t prefix{};
+        uint8_t prefix_length{};
+        std::optional<Address> next_hop{};
+        size_t interface_num{};
+        TableItem(const uint32_t _route_prefix,
+                   const uint8_t _prefix_length,
+                   const std::optional<Address> _next_hop,
+                   const size_t _interface_num):
+                        prefix(_route_prefix), 
+                        prefix_length(_prefix_length),
+                        next_hop(_next_hop),
+                        interface_num(_interface_num) {};
+        // ip是否符合表项
+        bool fit(uint32_t ip)
+        {
+            if(prefix_length){
+                size_t sub_length = 32ul - prefix_length;
+                return prefix == ((ip>>sub_length)<<sub_length);
+            }
+            return true;
+        }
+        // 相等
+        bool operator==(const TableItem &rhs){
+            return prefix == rhs.prefix and prefix_length == rhs.prefix_length;
+        }
+    };
+    // 路由表
+    std::vector<TableItem> _table{};
   public:
     //! Add an interface to the router
     //! \param[in] interface an already-constructed network interface

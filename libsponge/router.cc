@@ -28,15 +28,45 @@ void Router::add_route(const uint32_t route_prefix,
                        const size_t interface_num) {
     cerr << "DEBUG: adding route " << Address::from_ipv4_numeric(route_prefix).ip() << "/" << int(prefix_length)
          << " => " << (next_hop.has_value() ? next_hop->ip() : "(direct)") << " on interface " << interface_num << "\n";
-
+    
     DUMMY_CODE(route_prefix, prefix_length, next_hop, interface_num);
     // Your code here.
+    TableItem item(route_prefix, prefix_length, next_hop, interface_num);
+    // 判断相等(测试中不会出现的逻辑)
+    // auto ite = std::find(_table.begin(), _table.end(), item);
+    // if(ite != _table.end()){
+    //     *ite == item;
+    // }
+    // else{
+    //     _table.push_back(std::move(item));
+    // }
+    _table.push_back(std::move(item));
 }
 
 //! \param[in] dgram The datagram to be routed
 void Router::route_one_datagram(InternetDatagram &dgram) {
     DUMMY_CODE(dgram);
     // Your code here.
+    if(dgram.header().ttl < 2ul)
+        return;
+
+    uint32_t ip = dgram.header().dst;
+    auto item = _table.end();
+    for(auto ite = _table.begin(); ite!=_table.end(); ite++)
+    {
+        if(ite->fit(ip)){
+            if(item==_table.end() or item->prefix_length < ite->prefix_length)
+                item = ite;
+        }
+    }
+    if(item != _table.end())
+    {
+        dgram.header().ttl--;
+        interface(item->interface_num).send_datagram(
+            std::move(dgram), 
+            item->next_hop.has_value() ? item->next_hop.value() : Address::from_ipv4_numeric(ip)
+        );
+    }
 }
 
 void Router::route() {
